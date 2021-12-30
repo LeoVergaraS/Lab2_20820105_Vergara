@@ -57,4 +57,5 @@ sol(PF):-date(12,12,2021,D1),
     paradigmaDocsRegister(P2,D2,"Pedro","Pass2",P3),
     paradigmaDocsRegister(P3,D2,"Miguel","Pass3",PF).
 
+escribir(X):-write(sol(X)).
 
