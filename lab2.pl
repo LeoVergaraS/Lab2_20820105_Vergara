@@ -45,8 +45,22 @@ setListaUsuario(P1,LU,P2):-
     caddddr(P1,LD),
     P2 = [Name,Date,SA,LU,LD].
 
+setListaDocumento(P1,LD,P2):-
+    car(P1,Name),
+    cadr(P1,Date),
+    caddr(P1,SA),
+    cadddr(P1,LU),
+    P2 = [Name,Date,SA,LU,LD].
+
 %TDA usuario: constructor
 usuario(Name,Pass,Date,[Name,Pass,Date]):- string(Name),string(Pass),date(_,_,_,Date).
+
+%TDA documento: constructor
+documento(Autor,Fecha,Nombre,Contenido,[Autor,Fecha,Nombre,Contenido,[]]):-
+    string(Autor),
+    date(_,_,_,Fecha),
+    string(Nombre),
+    string(Contenido).
 
 %Predicado pardigmaDocsRegister()
 existe([],_):-fail.
@@ -71,7 +85,8 @@ sol(PF):-date(12,12,2021,D1),
     paradigmaDocsRegister(P1,D2,"Leo","Pass1",P2),
     paradigmaDocsRegister(P2,D2,"Pedro","Pass2",P3),
     paradigmaDocsRegister(P3,D2,"Miguel","Pass3",P4),
-    paradigmaDocsLogin(P4,"Pedro","Pass2",PF).
+    paradigmaDocsLogin(P4,"Pedro","Pass2",P5),
+    paradigmaDocsCreate(P5,D2,"doc0","contenido doc0",PF).
 
 %Predicado paradigmaDocsLogin:
 esta([],_,_):- fail.
@@ -89,3 +104,13 @@ paradigmaDocsLogin(Sn1,Username,Password,Sn2):-
     agregar(SA,Username,SA1),
     setSesionActiva(Sn1,SA1,Sn2).
 
+%Predicado paradigmaDocsCreate
+paradigmaDocsCreate(Sn1,Fecha,Nombre,Contenido,Sn2):-
+    caddr(Sn1,SA),
+    \+(conectado(SA)),
+    car(SA,Autor),
+    documento(Autor,Fecha,Nombre,Contenido,Documento),
+    caddddr(Sn1,LD),
+    agregar(LD,Documento,LD1),
+    setListaDocumento(Sn1,LD1,PA),
+    setSesionActiva(PA,[],Sn2).
