@@ -117,14 +117,6 @@ paradigmaDocsRegister(Sn1,Fecha,Username,Password,Sn2):-
     setListaUsuario(Sn1,LU1,Sn2).
 
 
-sol(PF):-date(12,12,2021,D1),
-    date(22,12,2021,D2),
-    paradigmaDocs("DuckDocs",D1,P1),
-    paradigmaDocsRegister(P1,D2,"Leo","Pass1",P2),
-    paradigmaDocsRegister(P2,D2,"Pedro","Pass2",P3),
-    paradigmaDocsRegister(P3,D2,"Miguel","Pass3",P4),
-    paradigmaDocsLogin(P4,"Pedro","Pass2",P5),
-    paradigmaDocsCreate(P5,D2,"doc0","contenido doc0",PF).
 
 %Predicado paradigmaDocsLogin:
 esta([],_,_):- fail.
@@ -243,6 +235,39 @@ paradigmaDocsAdd(Sn1,IdD,Fecha,ContenidoAgregar,Sn2):-
     actualizarLD(LD,IdD1,Documento2,LD1),
     setListaDocumento(Sn1,LD1,PA),
     setSesionActiva(PA,[],Sn2).
+
+%Predicado paradigmaDocsRestoreVersion:
+paradigmaDocsRestoreVersion(Sn1,Fecha,IdD,IdV,Sn2):-
+    % Verifica si hay una sesion activa,
+    caddr(Sn1,SA),
+    \+(conectado(SA)),
+
+    % Se busca el documento y se verifica
+    % si el usuario conectado tiene permiso
+    % de compatir o si es propietario.
+    caddddr(Sn1,LD),
+    IdD1 is IdD - 1,
+    buscarElemento(LD,IdD1,Documento),
+
+    % es propietario?
+    car(SA,Username),
+    propietario(Documento,Username),
+
+    cadddr(Documento,Contenido),
+    cadddddr(Documento,LV),
+    agregarAListaVersiones(LV,0,Contenido,Fecha,LV1),
+    setListaVersiones(Documento,LV1,Documento1),
+
+    buscarElemento(LV1,IdV,VersionN),
+    cadr(VersionN,ContenidoVersionN),
+    setContenido(Documento1,ContenidoVersionN,Documento2),
+
+    actualizarLD(LD,IdD1,Documento2,LD1),
+
+    setListaDocumento(Sn1,LD1,PA),
+    setSesionActiva(PA,[],Sn2).
+
+
 
 
 
