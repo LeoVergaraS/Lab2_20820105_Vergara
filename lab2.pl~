@@ -65,7 +65,7 @@ usuario(Name,Pass,Date,[Name,Pass,Date]):- string(Name),string(Pass),date(_,_,_,
 %TDA permisos: constructor
 permisos(LP,LUP,[LP,LUP]).
 
-%TDA documento: constructor
+%TDA documento: constructor y selector
 documento(Autor,Fecha,Nombre,Contenido,[Autor,Fecha,Nombre,Contenido,[],[]]):-
     string(Autor),
     date(_,_,_,Fecha),
@@ -77,8 +77,20 @@ setListaPermisos(Do1,LP,Do2):-
     cadr(Do1,Fecha),
     caddr(Do1,Nombre),
     cadddr(Do1,Contenido),
-    cadddddr(Do1,LH),
-    Do2 = [Autor,Fecha,Nombre,Contenido,LP,LH].
+    cadddddr(Do1,LV),
+    Do2 = [Autor,Fecha,Nombre,Contenido,LP,LV].
+
+setListaVersiones(Do1,LV,Do2):-
+    car(Do1,Autor),
+    cadr(Do1,Fecha),
+    caddr(Do1,Nombre),
+    cadddr(Do1,Contenido),
+    caddddr(Do1,LP),
+    Do2 = [Autor,Fecha,Nombre,Contenido,LP,LV].
+
+%TDA version: constructor
+version(Id,Contenido,Fecha,[Id,Contenido,Fecha]):-
+    integer(Id),string(Contenido),date(_,_,_,Fecha).
 
 %Predicado pardigmaDocsRegister()
 existe([],_):-fail.
@@ -169,6 +181,7 @@ paradigmaDocsShare(Sn1,IdD,LP,LUP,Sn2):-
     % Se busca el documento y se verifica
     % si el usuario conectado tiene permiso
     % de compatir o si es propietario.
+    caddddr(Sn1,LD),
     IdD1 is IdD - 1,
     buscarElemento(LD,IdD1,Documento),
 
@@ -183,6 +196,39 @@ paradigmaDocsShare(Sn1,IdD,LP,LUP,Sn2):-
     actualizarLD(LD,IdD1,Documento1,LD1),
     setListaDocumento(Sn1,LD1,PA),
     setSesionActiva(PA,[],Sn2).
+
+%Predicado paradigmaDocsAdd:
+concatenar(String1,String2,String3):-
+    string_chars(String1,ListaString1),
+    string_chars(String2,ListaString2),
+    append(ListaString1,ListaString2,LS3),
+    atomics_to_string(LS3,String3).
+
+agregarAListaVersiones([],Id,Contenido,Fecha,[VersionN]):-version(Id,Contenido,Fecha,VersionN).
+agregarAListaVersiones([H|T],Id,Contenido,Fecha,[H|L]):-Id1 is Id + 1,
+    agregarAListaVersiones(T,Id1,Contenido,Fecha,L).
+
+paradigmaDocsAdd(Sn1,IdD,Fecha,ContenidoAgregar,Sn2):-
+    % Verifica si hay una sesion activa,
+    caddr(Sn1,SA),
+    \+(conectado(SA)),
+
+    % Se busca el documento y se verifica
+    % si el usuario conectado tiene permiso
+    % de compatir o si es propietario.
+    caddddr(Sn1,LD),
+    IdD1 is IdD - 1,
+    buscarElemento(LD,IdD1,Documento),
+
+    % es propietario? o tiene permiso de escritura?
+    car(SA,Username),
+    caddddr(Documento,PermisosDocumento),
+    (propietario(Documento,Username);
+    tienePermiso(Username,PermisosDocumento,"W")),
+
+    agregarAListaVersiones(LV,0,Contenido,Fecha,LV1),
+    setListaVersiones(Sn1,LV1,PA).
+
 
 
 
