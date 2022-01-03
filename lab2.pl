@@ -409,10 +409,39 @@ paradigmaDocsRevokeAllAccesses(Sn1,IdsD,Sn2):-
     setSesionActiva(PA,[],Sn2).
 
 %Predicado paradigmaDocsSearch:
+buscarEnVersiones([],_):-fail.
+buscarEnVersiones([H|T],SearchText):-
+    cadr(H,ContenidoVersion),
+    (sub_string(ContenidoVersion,_,_,_,SearchText)->
+    %then
+    !;
+    %else
+    buscarEnVersiones(T,SearchText)).
+
+filtrarSearch([],_,_,ListAux,ListAux).
+filtrarSearch([H|T],Username,SearchText,ListAux,ListRes):-
+    caddddr(H,LP),
+    cadddr(H,Contenido),
+    cadddddr(H,LV),
+    %if
+    (((propietario(H,Username);tienePermiso(Username,LP,"W");tienePermiso(Username,LP,"R")),
+     (sub_string(Contenido,_,_,_,SearchText);buscarEnVersiones(LV,SearchText)))->
+    %then
+    agregar(ListAux,H,ListAux1), filtrarSearch(T,Username,SearchText,ListAux1,ListRes);
+    %else
+    filtrarSearch(T,Username,SearchText,ListAux,ListRes)).
+
+paradigmaDocsSearch(Sn1,SearchText,Documents):-
+    % Verifica si hay una sesion activa,
+    caddr(Sn1,SA),
+    \+(conectado(SA)),
+
+    % se filtra la lista de documentos de paradigmaDocs.
+    car(SA,Username),
+    caddddr(Sn1,LD),
+    filtrarSearch(LD,Username,SearchText,[],Documents).
 
 %Predicado paradigmaDocsDelete:
-%Autor,Fecha,Nombre,Contenido,[],[]
-
 eliminar(_,0,[]).
 eliminar([H|T],Id,[H|L]):-Id1 is Id - 1, eliminar(T,Id1,L).
 
@@ -527,7 +556,7 @@ test4(PT4):-test3(PT3),
     paradigmaDocsLogin(P4,"Pedro","Pass2",P5),
     paradigmaDocsAdd(P5,2,D1,"Partes importantes: 1. Mitocondrias, 2. Nucleo, 3. Aparato de Golgi, entre otros.",P6),
     paradigmaDocsLogin(P6,"Sara","Pass4",P7),
-    paradigmaDocsAdd(P7,3,D1,"3. Lechuga. 4. Bebida y jugos. 5. Sal",PT4).
+    paradigmaDocsAdd(P7,3,D1,"3. la Lechuga. 4. Bebida y jugos. 5. Sal",PT4).
 
 % Test 3, paradigmaDocsRestoreVersion: se restauraron 2 versiones del
 % documento 2 y 1 del documento 3 en la misma fecha.
@@ -540,10 +569,9 @@ test5(PT5):-test4(PT4),
     paradigmaDocsLogin(P4,"Romina","Pass5",P5),
     paradigmaDocsRestoreVersion(P5,D1,2,3,PT5).
 
-test6(PT6):-test5(PT5),
-    date(30,12,2021,D1),
+test6(Documents):-test5(PT5),
     paradigmaDocsLogin(PT5,"Leo","Pass1",P1),
-    paradigmaDocsDelete(P1,1,D1,10,PT6).
+    paradigmaDocsSearch(P1,"la",Documents).
 
 
 
