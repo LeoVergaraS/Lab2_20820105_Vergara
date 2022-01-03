@@ -408,6 +408,57 @@ paradigmaDocsRevokeAllAccesses(Sn1,IdsD,Sn2):-
     setListaDocumento(Sn1,LD1,PA),
     setSesionActiva(PA,[],Sn2).
 
+%Predicado paradigmaDocsSearch:
+
+%Predicado paradigmaDocsDelete:
+%Autor,Fecha,Nombre,Contenido,[],[]
+
+eliminar(_,0,[]).
+eliminar([H|T],Id,[H|L]):-Id1 is Id - 1, eliminar(T,Id1,L).
+
+eliminarCaracteres(Doc,NoC,Doc1):-
+    cadddr(Doc,Contenido),
+    string_length(Contenido,LargoCon),
+    N is LargoCon - NoC,
+    %if
+    (N =< 0 ->
+    %then
+    setContenido(Doc,"",Doc1);
+    %else
+    string_chars(Contenido,ListCon),
+    eliminar(ListCon,N,ListCon1),
+    atomics_to_string(ListCon1,Contenido1),
+    setContenido(Doc,Contenido1,Doc1)).
+
+paradigmaDocsDelete(Sn1,IdD,Date,NoC,Sn2):-
+    % Verifica si hay una sesion activa,
+    caddr(Sn1,SA),
+    \+(conectado(SA)),
+
+    % Se busca el documento y se verifica
+    % si el usuario conectado tiene permiso
+    % de escritura o si es propietario.
+    caddddr(Sn1,LD),
+    IdD1 is IdD - 1,
+    buscarElemento(LD,IdD1,Documento),
+
+    % es propietario? o tiene permiso de escritura?
+    car(SA,Username),
+    caddddr(Documento,PermisosDocumento),
+    (propietario(Documento,Username);
+    tienePermiso(Username,PermisosDocumento,"W")),
+
+    cadddr(Documento,Contenido),
+    cadddddr(Documento,LV),
+    agregarAListaVersiones(LV,0,Contenido,Date,LV1),
+    setListaVersiones(Documento,LV1,Documento1),
+
+    eliminarCaracteres(Documento1,NoC,Documento2),
+    actualizarLD(LD,IdD1,Documento2,LD1),
+    setListaUsuario(Sn1,LD1,PA),
+    setSesionActiva(PA,[],Sn2).
+
+
 
 
 
@@ -492,16 +543,7 @@ test5(PT5):-test4(PT4),
 test6(PT6):-test5(PT5),
     date(30,12,2021,D1),
     paradigmaDocsLogin(PT5,"Leo","Pass1",P1),
-    paradigmaDocsShare(P1,1,["W","R"],["Romina"],P2),
-    paradigmaDocsLogin(P2,"Romina","Pass5",P3),
-    paradigmaDocsCreate(P3,D1,"Prueba","Prueba de texto.",P4),
-    paradigmaDocsLogin(P4,"Romina","Pass5",P5),
-    paradigmaDocsShare(P5,6,["W","R","C"],["Leo","Sara"],P6),
-    paradigmaDocsLogin(P6,"Romina","Pass5",P7),
-    paradigmaDocsRevokeAllAccesses(P7,[2,6],PT6).
-
-
-
+    paradigmaDocsDelete(P1,1,D1,10,PT6).
 
 
 
