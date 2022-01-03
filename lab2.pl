@@ -267,6 +267,8 @@ paradigmaDocsRestoreVersion(Sn1,Fecha,IdD,IdV,Sn2):-
     setListaDocumento(Sn1,LD1,PA),
     setSesionActiva(PA,[],Sn2).
 
+
+
 %Predicado paradigmaDocsToString:
 dateToString(Date,StrOut):-
     date(D,M,A,Date),
@@ -288,11 +290,11 @@ permisosLegibles([H|T],[C|L]):-
      H == "S" -> C = "Compartir",permisosLegibles(T,L);
      H == "R" -> C = "Lectura",permisosLegibles(T,L)).
 
-listAccessesToString([],"No hay informacion en la lista.\n").
+listAccessesToString([],"\tNo hay informacion en la lista.\n").
 listAccessesToString([LP,LUP],StrOut):-
     permisosLegibles(LP,LP1),
     atomics_to_string(LP1,", ",StrLP),atomics_to_string(LUP,", ",StrLUP),
-    concatenar("Permisos: ",StrLP,StrLP1),concatenar("Usuarios: ",StrLUP,StrLUP1),
+    concatenar("\tPermisos: ",StrLP,StrLP1),concatenar("Usuarios: ",StrLUP,StrLUP1),
     concatenar(StrLP1,". ",StrAux),concatenar(StrAux,StrLUP1,StrAux1),concatenar(StrAux1,".\n",StrOut).
 
 
@@ -306,11 +308,12 @@ versionToString(Version,StrOut):-
     dateToString(Fecha,StrFec),concatenar("Fecha de modificacion: ",StrFec,StrFec1),concatenar(StrFec1,".\n",StrAux3),
     concatenar(StrAux1,StrAux2,StrAux4),concatenar(StrAux4,StrAux3,StrOut).
 
-listVersionToString([],"","No hay informacion en la lista.\n").
+listVersionToString([],"","\tNo hay informacion en la lista.\n").
 listVersionToString([],StrAux,StrAux).
 listVersionToString([H|T],StrAux,StrOut):-
     versionToString(H,StrVer),
-    concatenar(StrAux,StrVer,StrAux1),
+    concatenar(StrAux,"\t",StrAux2),
+    concatenar(StrAux2,StrVer,StrAux1),
     listVersionToString(T,StrAux1,StrOut).
 
 documentsToString(Documento,StrOut):-
@@ -325,15 +328,15 @@ documentsToString(Documento,StrOut):-
     dateToString(Fecha,StrFec),concatenar("Fecha de creacion: ",StrFec,StrFec1),concatenar(StrFec1,". ",StrAux2),
     concatenar("Nombre del documento: ",Nombre,StrName),concatenar(StrName,". ",StrAux3),
     concatenar("Contenido del documento: ",Contenido,StrCon),concatenar(StrCon,".\n\n",StrAux4),
-    listAccessesToString(LP,StrLP),concatenar("Lista Permisos:\n",StrLP,StrAux5),
-    listVersionToString(LV,"",StrLV),concatenar("\nLista de versiones:\n",StrLV,StrAux6),
+    listAccessesToString(LP,StrLP),concatenar("\tLista Permisos:\n",StrLP,StrAux5),
+    listVersionToString(LV,"",StrLV),concatenar("\n\tLista de versiones:\n",StrLV,StrAux6),
 
     concatenar(StrAux,StrAux2,StrFin1),concatenar(StrFin1,StrAux3,StrFin2),
     concatenar(StrFin2,StrAux4,StrFin3),concatenar(StrFin3,StrAux5,StrFin4),
     concatenar(StrFin4,StrAux6,StrOut).
 
 
-listDocumentsToString([],1,"","No hay informacion en la lista.\n").
+listDocumentsToString([],1,"","\tNo hay informacion en la lista.\n").
 listDocumentsToString([],_,StrAux,StrAux).
 listDocumentsToString([H|T],Id,StrAux,StrOut):-
     number_string(Id,StrId),
@@ -350,8 +353,12 @@ listDocumentsToString([H|T],Id,StrAux,StrOut):-
 filtrar([],_,[]).
 filtrar([DocumentoH|T],Username,[DocumentoC|L]):-
     caddddr(DocumentoH,LP),
-    ((propietario(DocumentoH,Username);tienePermiso(Username,LP,_)) -> DocumentoC = DocumentoH,filtrar(T,Username,L);
-                                                                       filtrar(T,Username,L)).
+    %if
+    ((propietario(DocumentoH,Username);tienePermiso(Username,LP,_)) ->
+    %then
+    DocumentoC = DocumentoH,filtrar(T,Username,L);
+    %else
+    filtrar(T,Username,L)).
 
 paradigmaDocsToString(Sn1,StrOut):-
     caddr(Sn1,SA),
@@ -368,6 +375,55 @@ paradigmaDocsToString(Sn1,StrOut):-
               concatenar(Str3,"\n\n\n Plataforma DuckDocs creado por Leo Inaki Vergara Sepulveda.",StrOut))
    */
 
+
+%Predicado paradigmaDocsRevokeAllAccesses:
+
+actualizarPermisos([],_,null,[]).
+actualizarPermisos([H|T],Username,null,[C|L]):-
+    %if
+    (propietario(H,Username)->
+    %then
+    setListaPermisos(H,[],H1),C = H1,actualizarPermisos(T,Username,null,L);
+    %else
+    C = H, actualizarPermisos(T,Username,null,L)).
+
+actualizarPermisos(LD,_,[],LD).
+actualizarPermisos(LD,Username,[IdC|IdsT],LDRes):-
+    IdC1 is IdC - 1,
+    buscarElemento(LD,IdC1,Documento),
+    propietario(Documento,Username),
+    setListaPermisos(Documento,[],Documento1),
+    actualizarLD(LD,IdC1,Documento1,LD1),
+    actualizarPermisos(LD1,Username,IdsT,LDRes).
+
+paradigmaDocsRevokeAllAccesses(Sn1,IdsD,Sn2):-
+    % Verifica si hay una sesion activa,
+    caddr(Sn1,SA),
+    \+(conectado(SA)),
+
+    % se revocan los accesos
+    caddddr(Sn1,LD),
+    car(SA,Username),
+    actualizarPermisos(LD,Username,IdsD,LD1),
+    setListaDocumento(Sn1,LD1,PA),
+    setSesionActiva(PA,[],Sn2).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+% ---------------------------------------------------------------------------------------------
+%                                         TEST
+% ---------------------------------------------------------------------------------------------
 
 % Test 1, paradigmaDocsRegister: 5 personas se registraron en la
 % plataforma en el mismo dia,
@@ -390,7 +446,7 @@ test2(PT2):-test1(PT1),
     paradigmaDocsLogin(P2,"Romina","Pass5",P3),
     paradigmaDocsCreate(P3,D1,"Informe de biologia","La celulas animales:",P4),
     paradigmaDocsLogin(P4,"Miguel","Pass3",P5),
-    paradigmaDocsCreate(P5,D1,"Lista del supermercado","1. Huevos. 2. Leche",P6),
+    paradigmaDocsCreate(P5,D1,"Lista del supermercado","1. Huevos. 2. Leche. ",P6),
     paradigmaDocsLogin(P6,"Sara","Pass4",P7),
     paradigmaDocsCreate(P7,D1,"Tabla de valores:","1. PlayStation 5 -> 500.000. 2. Xbox 360 -> 120.000 3. Nintendo Switch lite -> 220.000",P8),
     paradigmaDocsLogin(P8,"Pedro","Pass2",P9),
@@ -403,14 +459,35 @@ test3(PT3):-test2(PT2),
     paradigmaDocsLogin(PT2,"Miguel","Pass3",P1),
     paradigmaDocsShare(P1,3,["W","R","C","S"],["Leo","Sara"],P2),
     paradigmaDocsLogin(P2,"Romina","Pass5",P3),
-    paradigmaDocsShare(P3,2,["W"],["Leo","Romina","Pedro"],P4),
+    paradigmaDocsShare(P3,2,["W"],["Leo","Sara","Pedro"],P4),
     paradigmaDocsLogin(P4,"Sara","Pass4",P5),
     paradigmaDocsShare(P5,4,["W","R","C"],["Romina","Miguel"],P6),
     paradigmaDocsLogin(P6,"Pedro","Pass2",P7),
     paradigmaDocsShare(P7,5,["W","R"],["Leo"],PT3).
 
+% Test 4, paradigmaDocsAdd: 3 usuario agregaron contenido al documento 2
+% y 1 agrego al documento 3 en la misma fecha.
+test4(PT4):-test3(PT3),
+    date(26,12,2021,D1),
+    paradigmaDocsLogin(PT3,"Leo","Pass1",P1),
+    paradigmaDocsAdd(P1,2,D1," Es el tipo de celula eucariota. ",P2),
+    paradigmaDocsLogin(P2,"Romina","Pass5",P3),
+    paradigmaDocsAdd(P3,2,D1,"Es decir poseen un nucleo bien definido. ",P4),
+    paradigmaDocsLogin(P4,"Pedro","Pass2",P5),
+    paradigmaDocsAdd(P5,2,D1,"Partes importantes: 1. Mitocondrias, 2. Nucleo, 3. Aparato de Golgi, entre otros.",P6),
+    paradigmaDocsLogin(P6,"Sara","Pass4",P7),
+    paradigmaDocsAdd(P7,3,D1,"3. Lechuga. 4. Bebida y jugos. 5. Sal",PT4).
 
-
+% Test 3, paradigmaDocsRestoreVersion: se restauraron 2 versiones del
+% documento 2 y 1 del documento 3 en la misma fecha.
+test5(PT5):-test4(PT4),
+    date(27,12,2021,D1),
+    paradigmaDocsLogin(PT4,"Romina","Pass5",P1),
+    paradigmaDocsRestoreVersion(P1,D1,2,2,P2),
+    paradigmaDocsLogin(P2,"Miguel","Pass3",P3),
+    paradigmaDocsRestoreVersion(P3,D1,3,0,P4),
+    paradigmaDocsLogin(P4,"Romina","Pass5",P5),
+    paradigmaDocsRestoreVersion(P5,D1,2,3,PT5).
 
 
 
