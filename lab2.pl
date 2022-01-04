@@ -629,9 +629,45 @@ test5(PT5):-test4(PT4),
     paradigmaDocsLogin(P4,"Romina","Pass5",P5),
     paradigmaDocsRestoreVersion(P5,D1,2,3,PT5).
 
-test6():-test5(PT5),
-    paradigmaDocsLogin(PT5,"Leo","Pass1",P1),
-    paradigmaDocsToString(P1,Str),write(Str).
+pTs1():-test3(X),paradigmaDocsToString(X,Str),write(Str).
+pTs2():-test4(X),paradigmaDocsToString(X,Str),write(Str).
+pTs3():-test5(X),paradigmaDocsToString(X,Str),write(Str).
+
+test6(PT6):-test5(PT5),
+    paradigmaDocsLogin(PT5,"Romina","Pass5",P1),
+    paradigmaDocsRevokeAllAccesses(P1,null,P2),
+    paradigmaDocsLogin(P2,"Miguel","Pass3",P3),
+    paradigmaDocsRevokeAllAccesses(P3,null,P4),
+    paradigmaDocsLogin(P4,"Leo","Pass1",P5),
+    paradigmaDocsRevokeAllAccesses(P5,null,PT6).
+
+test7():-test6(PT6),
+    paradigmaDocsLogin(PT6,"Romina","Pass5",P1),
+    paradigmaDocsSearch(P1,"la",P2),write(P2),
+    paradigmaDocsLogin(PT6,"Miguel","Pass3",P3),
+    paradigmaDocsSearch(P3,"el",P4),write(P4),
+    paradigmaDocsLogin(PT6,"Leo","Pass1",P5),
+    paradigmaDocsSearch(P5,"hola",PT7),write(PT7).
+
+test8(PT8):-test5(PT5),
+    date(30,12,2021,D1),
+    paradigmaDocsLogin(PT5,"Romina","Pass5",P1),
+    paradigmaDocsDelete(P1,2,D1,10,P2),
+    paradigmaDocsLogin(P2,"Miguel","Pass3",P3),
+    paradigmaDocsDelete(P3,4,D1,2,P4),
+    paradigmaDocsLogin(P4,"Leo","Pass1",P5),
+    paradigmaDocsDelete(P5,1,D1,100,PT8).
+
+test9(PT9):-test5(PT5),
+    date(31,12,2021,D1),
+    paradigmaDocsLogin(PT5,"Romina","Pass5",P1),
+    paradigmaDocsSearchAndReplace(P1,2,"a","e",D1,P2),
+    paradigmaDocsLogin(P2,"Miguel","Pass3",P3),
+    paradigmaDocsSearchAndReplace(P3,4,"i","u",D1,P4),
+    paradigmaDocsLogin(P4,"Leo","Pass1",P5),
+    paradigmaDocsSearchAndReplace(P5,1,"Titulo1:","Sabado 22:",D1,PT9).
+
+
 
 
 
