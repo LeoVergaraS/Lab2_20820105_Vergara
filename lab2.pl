@@ -350,30 +350,32 @@ listDocumentsToString([H|T],Id,StrAux,StrOut):-
 
     listDocumentsToString(T,Id1,Str4,StrOut).
 
-filtrar([],_,[]).
-filtrar([DocumentoH|T],Username,[DocumentoC|L]):-
+filtrar([],_,ListaAux,ListaAux).
+filtrar([DocumentoH|T],Username,ListaAux,ListaRes):-
     caddddr(DocumentoH,LP),
     %if
     ((propietario(DocumentoH,Username);tienePermiso(Username,LP,_)) ->
     %then
-    DocumentoC = DocumentoH,filtrar(T,Username,L);
+    agregar(ListaAux,DocumentoH,ListaAux1),filtrar(T,Username,ListaAux1,ListaRes);
     %else
-    filtrar(T,Username,L)).
+    filtrar(T,Username,ListaAux,ListaRes)).
 
 paradigmaDocsToString(Sn1,StrOut):-
     caddr(Sn1,SA),
     %car(SA,Username),
     caddddr(Sn1,LD),
-   (SA== []  ->listDocumentsToString(LD,1,"",String1),
-              concatenar("Bienvenido a la plataforma DuckDocs, los documentos presente en la plataformas son:\n\n",String1,String2),
-              concatenar(String2,"\n\n\n Plataforma DuckDocs creado por Leo Inaki Vergara Sepulveda.",StrOut)).
+    %if
+   (conectado(SA)  ->
+    %then
+    listDocumentsToString(LD,1,"",String1),
+    concatenar("Bienvenido a la plataforma DuckDocs, los documentos presente en la plataformas son:\n\n",String1,String2),
+    concatenar(String2,"\n\n\n Plataforma DuckDocs creado por Leo Inaki Vergara Sepulveda.",StrOut);
+    %else
+    car(SA,Username),
+    filtrar(LD,Username,[],LD1),listDocumentsToString(LD1,1,"",String1),concatenar("Bienvenido a la plataforma DuckDocs, ",Username,Str1),
+    concatenar(Str1,". Los documentos en los que tienes permiso o son tuyos son:\n\n",Str2),concatenar(Str2,String1,Str3),
+    concatenar(Str3,"\n\n\n Plataforma DuckDocs creado por Leo Inaki Vergara Sepulveda.",StrOut)).
 
-   /*;
-
-    SA==[_]-> filtrar(LD,Username,LD1),listDocumentsToString(LD1,1,"",String1),concatenar("Bienvenido a la plataforma DuckDocs, ",Username,Str1),
-              concatenar(Str1,". Los documentos en los que tienes permiso o son tuyos son:\n\n",Str2),concatenar(Str2,String1,Str3),
-              concatenar(Str3,"\n\n\n Plataforma DuckDocs creado por Leo Inaki Vergara Sepulveda.",StrOut))
-   */
 
 
 %Predicado paradigmaDocsRevokeAllAccesses:
@@ -488,6 +490,64 @@ paradigmaDocsDelete(Sn1,IdD,Date,NoC,Sn2):-
     setSesionActiva(PA,[],Sn2).
 
 
+%Predicado paradigmaDocsSearchAndReplace:
+reemplazar("",_,_,ContAux,ContAux).
+reemplazar(Contenido,SearchText,ReplaceText,ContAux,ContRes):-
+    %if: si no hay mas SearchText
+   (\+(sub_string(Contenido,_,_,_,SearchText))->
+    %then: copio lo ultimo que queda
+    concatenar(ContAux,Contenido,ContAux5),reemplazar("",SearchText,ReplaceText,ContAux5,ContRes);
+    %else
+    string_length(SearchText,LenST),
+    sub_string(Contenido,Antes,_,Despues,SearchText),
+
+        %if: no hay nada antes
+        (Antes == 0 ->
+        %then: copio el ReplaceText y continuo con el string despues del SearchText
+        concatenar(ContAux,ReplaceText,ContAux1),sub_string(Contenido,LenST,_,0,Contenido1),reemplazar(Contenido1,SearchText,ReplaceText,ContAux1,ContRes);
+        %else: copio lo que hay antes, el ReplaceText y continuo con el sting despues del SearchText
+        Despues1 is Despues + LenST,sub_string(Contenido,0,_,Despues1,Contenido2),concatenar(ContAux,Contenido2,ContAux2),
+        concatenar(ContAux2,ReplaceText,ContAux3),Antes1 is Antes + LenST,sub_string(Contenido,Antes1,_,0,Contenido3),
+        reemplazar(Contenido3,SearchText,ReplaceText,ContAux3,ContRes))).
+
+reemplazarTexto(Doc,SearchText,ReplaceText,Doc1):-
+    cadddr(Doc,Contenido),
+    (sub_string(Contenido,_,_,_,SearchText)->
+    %then
+    reemplazar(Contenido,SearchText,ReplaceText,"",Contenido1),setContenido(Doc,Contenido1,Doc1);
+
+    %else
+    write("El documento no contiene el texto buscado, no se puede reemplazar."),Doc1 = Doc).
+
+paradigmaDocsSearchAndReplace(Sn1,IdD,Date,SearchText,ReplaceText,Sn2):-
+    % Verifica si hay una sesion activa,
+    caddr(Sn1,SA),
+    \+(conectado(SA)),
+
+    % Se busca el documento y se verifica
+    % si el usuario conectado tiene permiso
+    % de escritura o si es propietario.
+    caddddr(Sn1,LD),
+    IdD1 is IdD - 1,
+    buscarElemento(LD,IdD1,Documento),
+
+    % es propietario? o tiene permiso de escritura?
+    car(SA,Username),
+    caddddr(Documento,PermisosDocumento),
+    (propietario(Documento,Username);
+    tienePermiso(Username,PermisosDocumento,"W")),
+
+    cadddr(Documento,Contenido),
+    cadddddr(Documento,LV),
+    agregarAListaVersiones(LV,0,Contenido,Date,LV1),
+    setListaVersiones(Documento,LV1,Documento1),
+
+    reemplazarTexto(Documento1,SearchText,ReplaceText,Documento2),
+    actualizarLD(LD,IdD1,Documento2,LD1),
+    setListaDocumento(Sn1,LD1,PA),
+    setSesionActiva(PA,[],Sn2).
+
+
 
 
 
@@ -569,9 +629,9 @@ test5(PT5):-test4(PT4),
     paradigmaDocsLogin(P4,"Romina","Pass5",P5),
     paradigmaDocsRestoreVersion(P5,D1,2,3,PT5).
 
-test6(Documents):-test5(PT5),
+test6():-test5(PT5),
     paradigmaDocsLogin(PT5,"Leo","Pass1",P1),
-    paradigmaDocsSearch(P1,"la",Documents).
+    paradigmaDocsToString(P1,Str),write(Str).
 
 
 
